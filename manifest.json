@@ -1,0 +1,22 @@
+{
+  "name": "yami mammy",
+  "short_name": "yami mammy",
+  "description": "Smart Recipe Manager",
+  "start_url": "/yami-pwa/",
+  "display": "standalone",
+  "background_color": "#030d1a",
+  "theme_color": "#a855f7",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
