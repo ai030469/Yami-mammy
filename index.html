@@ -4,10 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>yami mammy</title>
-<meta property="og:title" content="yami mammy">
-<meta property="og:description" content="מנהל המתכונים החכם שלך">
-<meta property="og:image" content="https://ai030469.github.io/yami-mammy/icon-512.png">
-<meta property="og:url" content="https://ai030469.github.io/yami-mammy/">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Heebo:wght@300;400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -1111,9 +1107,10 @@ animation: spin 0.8s linear infinite;
 <div class="welcome-msg" id="welcome-msg"></div>
 <div class="welcome-question">&#1502;&#1492; &#1489;&#1488; &#1500;&#1498; &#1500;&#1492;&#1499;&#1497;&#1503;?</div>
 </div>
-<div class="search-wrap">
+<div class="search-wrap" style="position:relative">
 <span class="search-icon">&#128269;</span>
-<input type="text" class="search-bar" id="home-search" placeholder="&#1495;&#1508;&#1513; &#1500;&#1508;&#1497; &#1513;&#1501;, &#1512;&#1499;&#1497;&#1489;, &#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492;..." oninput="doSearch(this.value)">
+<input type="text" class="search-bar" id="home-search" placeholder="&#1495;&#1508;&#1513; &#1500;&#1508;&#1497; &#1513;&#1501;, &#1512;&#1499;&#1497;&#1489;, &#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1492;..." oninput="doSearch(this.value)" onkeydown="onSearchKey(event)" autocomplete="off">
+<div id="search-autocomplete" style="display:none;position:absolute;top:100%;right:0;left:0;background:var(--bg-card);border:1px solid var(--border-purple);border-radius:12px;z-index:100;max-height:220px;overflow-y:auto;box-shadow:var(--glow-purple);margin-top:4px"></div>
 </div>
 <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 12px">
 <div class="categories-title" style="margin:0">&#1511;&#1496;&#1490;&#1493;&#1512;&#1497;&#1493;&#1514;</div>
@@ -1143,12 +1140,28 @@ animation: spin 0.8s linear infinite;
 </nav>
 </div>
 
+<!-- SCREEN: SEARCH RESULTS -->
+<div class="screen" id="screen-search">
+<nav class="navbar">
+<button class="btn btn-ghost btn-sm" id="search-back-btn" onclick="closeSearch()">&#8592; &#1495;&#1494;&#1493;&#1512;</button>
+<div class="logo" style="font-size:1rem" id="search-nav-title">&#1514;&#1493;&#1510;&#1488;&#1493;&#1514; &#1495;&#1497;&#1508;&#1493;&#1513;</div>
+<div style="width:60px"></div>
+</nav>
+<div class="container">
+<div id="search-results-list" class="recipe-list"></div>
+</div>
+</div>
+
 <!-- SCREEN: CATEGORY -->
 <div class="screen" id="screen-category">
 <nav class="navbar">
 <button class="btn btn-ghost btn-sm" onclick="goBack()">&#8592; &#1495;&#1494;&#1493;&#1512;</button>
 <div id="cat-screen-title" style="font-size:1rem;font-weight:700;color:var(--neon-purple)"></div>
+<div style="display:flex;gap:6px;align-items:center">
+<button class="btn btn-ghost btn-sm" id="cat-edit-btn" onclick="editCategoryFromScreen()" style="display:none;color:#a855f7;border-color:rgba(168,85,247,0.4);font-size:0.75rem;padding:5px 8px">&#9998;</button>
+<button class="btn btn-ghost btn-sm" id="cat-delete-btn" onclick="deleteCategoryFromScreen()" style="display:none;color:#ff6666;border-color:rgba(255,68,68,0.4);font-size:0.75rem;padding:5px 8px">&#128465;</button>
 <button class="btn btn-primary btn-sm" id="cat-add-btn" onclick="addToCurrentCategory()">+ &#1492;&#1493;&#1505;&#1507;</button>
+</div>
 </nav>
 <div class="container">
 <div class="recipe-list" id="cat-recipe-list"></div>
@@ -1430,6 +1443,7 @@ user: null,
 recipes: [],
 customCategories: [],
 customTerms: [],
+hiddenCategories: [],
 currentRecipe: null,
 editingId: null,
 selectedIcon: '\uD83C\uDF7D\uFE0F',
@@ -1442,6 +1456,7 @@ localStorage.setItem('yami_user', JSON.stringify(state.user));
 localStorage.setItem('yami_recipes', JSON.stringify(state.recipes));
 localStorage.setItem('yami_custom_cats', JSON.stringify(state.customCategories));
 localStorage.setItem('yami_custom_terms', JSON.stringify(state.customTerms));
+localStorage.setItem('yami_hidden_cats', JSON.stringify(state.hiddenCategories));
 }
 function loadState() {
 try {
@@ -1449,15 +1464,24 @@ var u = localStorage.getItem('yami_user');
 var r = localStorage.getItem('yami_recipes');
 var cc = localStorage.getItem('yami_custom_cats');
 var ct = localStorage.getItem('yami_custom_terms');
+var hc = localStorage.getItem('yami_hidden_cats');
 if (u) state.user = JSON.parse(u);
 if (r) state.recipes = JSON.parse(r);
 if (cc) state.customCategories = JSON.parse(cc);
 if (ct) state.customTerms = JSON.parse(ct);
+if (hc) state.hiddenCategories = JSON.parse(hc);
 } catch(e) {}
 }
 
 /* ── Helpers ── */
-function allCategories() { return CATEGORIES.concat(state.customCategories); }
+function allCategories() {
+var all = CATEGORIES.concat(state.customCategories);
+var result = [];
+for (var i = 0; i < all.length; i++) {
+if (state.hiddenCategories.indexOf(all[i].id) === -1) result.push(all[i]);
+}
+return result;
+}
 
 function getUserLang() { return (state.user && state.user.lang) ? state.user.lang : 'he'; }
 function isEn() { return getUserLang() === 'en'; }
@@ -1817,7 +1841,7 @@ if (state.customCategories[k].id === cat.id) { isCustom = true; break; }
 var svgIcon = '<span class="cat-icon">' + cat.icon + '</span>';
 var catLabel = isEn() ? (cat.en || cat.he) : cat.he;
 var badge = count > 0 ? '<span style="font-size:0.65rem;color:var(--neon-cyan);background:var(--neon-cyan-dim);border-radius:20px;padding:1px 6px;border:1px solid var(--border-cyan)">' + count + '</span>' : '';
-var delBtn = '<button onclick="event.stopPropagation();deleteCustomCategory(\'' + cat.id + '\')" style="background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.4);border-radius:4px;color:#ff6666;cursor:pointer;font-size:0.65rem;padding:1px 5px">&#10005;</button>';
+var delBtn = isCustom ? '<button onclick="event.stopPropagation();deleteCustomCategory(\'' + cat.id + '\')" style="background:rgba(255,68,68,0.15);border:1px solid rgba(255,68,68,0.4);border-radius:4px;color:#ff6666;cursor:pointer;font-size:0.65rem;padding:1px 5px">&#10005;</button>' : '';
 var editBtn = isCustom ? '<button onclick="event.stopPropagation();openEditCategoryModal(\'' + cat.id + '\')" style="background:rgba(168,85,247,0.15);border:1px solid rgba(168,85,247,0.4);border-radius:4px;color:#a855f7;cursor:pointer;font-size:0.65rem;padding:1px 5px">&#9998;</button>' : '';
 html += '<div class="category-chip" onclick="openCategory(\'' + cat.id + '\')">' +
 svgIcon + '<span>' + catLabel + '</span>' +
@@ -1833,7 +1857,13 @@ var all = allCategories();
 for (var i = 0; i < all.length; i++) { if (all[i].id === id) { cat = all[i]; break; } }
 if (!cat) return;
 currentCategoryId = id;
-document.getElementById('cat-screen-title').innerHTML = '<span style="font-size:1.4rem">' + cat.icon + '</span> ' + cat.he;
+document.getElementById('cat-screen-title').innerHTML = '<span style="font-size:1.4rem">' + cat.icon + '</span> ' + (isEn() ? (cat.en || cat.he) : cat.he);
+var isCustom = false;
+for (var k = 0; k < state.customCategories.length; k++) { if (state.customCategories[k].id === id) { isCustom = true; break; } }
+var delBtn = document.getElementById('cat-delete-btn');
+if (delBtn) delBtn.style.display = '';
+var editBtn2 = document.getElementById('cat-edit-btn');
+if (editBtn2) editBtn2.style.display = isCustom ? '' : 'none';
 refreshCategory();
 goTo('screen-category');
 }
@@ -1948,7 +1978,96 @@ for (var rj = 0; rj < recent.length; rj++) html += recipeItemHTML(recent[rj]);
 list.innerHTML = html;
 }
 
-function doSearch(val) { renderRecipeList(val); }
+function getSearchResults(filter) {
+var f = (filter || '').toLowerCase().trim();
+if (!f) return [];
+var results = [];
+for (var i = 0; i < state.recipes.length; i++) {
+var r = state.recipes[i];
+var match = false;
+if (r.nameHe && r.nameHe.toLowerCase().indexOf(f) !== -1) match = true;
+if (!match && r.nameEn && r.nameEn.toLowerCase().indexOf(f) !== -1) match = true;
+if (!match && r.notes && r.notes.toLowerCase().indexOf(f) !== -1) match = true;
+if (!match && r.ingredients) {
+for (var ii = 0; ii < r.ingredients.length; ii++) {
+if (r.ingredients[ii].name && r.ingredients[ii].name.toLowerCase().indexOf(f) !== -1) { match = true; break; }
+}
+}
+if (!match && r.steps) {
+for (var si = 0; si < r.steps.length; si++) {
+if (r.steps[si] && r.steps[si].toLowerCase().indexOf(f) !== -1) { match = true; break; }
+}
+}
+if (match) results.push(r);
+}
+results.sort(function(a,b){ return new Date(b.createdAt||0) - new Date(a.createdAt||0); });
+return results;
+}
+
+function doSearch(val) {
+var ac = document.getElementById('search-autocomplete');
+if (!ac) return;
+if (!val || val.trim().length < 1) { ac.style.display = 'none'; renderRecipeList(''); return; }
+var results = getSearchResults(val);
+if (!results.length) { ac.style.display = 'none'; return; }
+var html = '';
+for (var i = 0; i < Math.min(results.length, 6); i++) {
+var r = results[i];
+var title = isEn() ? (r.nameEn || r.nameHe) : (r.nameHe || r.nameEn);
+html += '<div onclick="selectSearchResult(\'' + r.id + '\')" style="padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border-purple);font-size:0.9rem;color:var(--text-primary)" onmouseover="this.style.background=\'var(--neon-purple-dim)\'" onmouseout="this.style.background=\'\'">' +
+'<span style="font-size:1.1rem;margin-left:8px">' + (r.icon || '\uD83C\uDF7D\uFE0F') + '</span>' + title + '</div>';
+}
+if (results.length > 6) {
+html += '<div onclick="openSearchScreen(\'' + encodeURIComponent(val) + '\')" style="padding:10px 16px;cursor:pointer;color:var(--neon-cyan);font-size:0.85rem;text-align:center">' +
+lbl('\u05e8\u05d0\u05d4 \u05db\u05dc ' + results.length + ' \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea', 'See all ' + results.length + ' results') + '</div>';
+}
+ac.innerHTML = html;
+ac.style.display = 'block';
+}
+
+function onSearchKey(e) {
+if (e.key === 'Enter' || e.keyCode === 13) {
+var val = document.getElementById('home-search').value;
+if (val && val.trim()) openSearchScreen(encodeURIComponent(val));
+}
+}
+
+function selectSearchResult(id) {
+var ac = document.getElementById('search-autocomplete');
+if (ac) ac.style.display = 'none';
+viewRecipe(id);
+}
+
+function openSearchScreen(encodedVal) {
+var val = decodeURIComponent(encodedVal);
+var ac = document.getElementById('search-autocomplete');
+if (ac) ac.style.display = 'none';
+var results = getSearchResults(val);
+var list = document.getElementById('search-results-list');
+var title = document.getElementById('search-nav-title');
+var backBtn = document.getElementById('search-back-btn');
+if (title) title.textContent = lbl('\u05ea\u05d5\u05e6\u05d0\u05d5\u05ea: "' + val + '"', 'Results: "' + val + '"');
+if (backBtn) backBtn.textContent = lbl('\u2190 \u05d7\u05d6\u05d5\u05e8', '\u2190 Back');
+if (list) {
+if (!results.length) {
+list.innerHTML = '<div class="empty-state"><div class="empty-icon">\uD83D\uDD0D</div><div class="empty-text">' + lbl('\u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05ea\u05d5\u05e6\u05d0\u05d5\u05ea', 'No results found') + '</div></div>';
+} else {
+var h = '';
+for (var i = 0; i < results.length; i++) h += recipeItemHTML(results[i]);
+list.innerHTML = h;
+}
+}
+goTo('screen-search');
+}
+
+function closeSearch() {
+var ac = document.getElementById('search-autocomplete');
+if (ac) ac.style.display = 'none';
+var inp = document.getElementById('home-search');
+if (inp) inp.value = '';
+renderRecipeList('');
+goBack();
+}
 
 /* ── Category selects ── */
 function populateCategorySelects() {
@@ -2418,6 +2537,11 @@ break;
 }
 
 name = name.replace(/^[,\u060c\s]+/,'').trim();
+// Remove parenthetical quantity/unit info like (240 מ"ל) or (80 גרם) from name
+name = name.replace(/\(\s*[\d\u00bd\u00bc\u00be]+\s*[^\)]*\)/g, '').trim();
+// Remove range expressions like "או עד 1 ק"ג" or "or up to 2 cups"
+name = name.replace(/(\s*(או עד|or up to|up to|or)\s+[\d\u00bd\u00bc\u00be\/\.\s]+\s*\S+)/i, '').trim();
+name = name.replace(/^[,\u060c\s]+/,'').trim();
 if (!name || name.length < 2) return null;
 return {name:name, amount:amount||'1', unit:unit||'\u05d9\u05d7\u05f3'};
 }
@@ -2452,6 +2576,14 @@ if (ingHeader)  { mode = 'ingredients'; continue; }
 if (stepHeader) { mode = 'steps'; continue; }
 if (noteHeader) { mode = 'notes'; continue; }
 
+// Sub-section headers within ingredients (e.g. "לבצק:", "למילוי:", "For the dough:")
+if (mode === 'ingredients' && line.length < 40 && /[:\u05dc\u05dc]/.test(line) && !/[\d]/.test(line)) {
+var subLower = line.replace(/[:\-]/g,'').trim();
+var isSubIng = true;
+for (var sx = 0; sx < SECTION_STEP.length; sx++) { if (subLower.toLowerCase().indexOf(SECTION_STEP[sx]) === 0) { isSubIng = false; break; } }
+if (isSubIng) continue; // skip sub-section header, stay in ingredients mode
+}
+
 if (/^\d+[\.\)]\s+\S/.test(line)) { mode = 'steps'; stepLines.push(line.replace(/^\d+[\.\)]\s+/,'')); continue; }
 if (/^[•\-\*]\s+\S/.test(line)) {
 if (mode !== 'steps' && mode !== 'notes') { mode = 'ingredients'; var bi = parseIngredientLine(line.replace(/^[•\-\*]\s+/,'')); if (bi) ingLines.push(bi); }
@@ -2465,7 +2597,8 @@ if (mode === 'auto' || mode === 'ingredients') { mode = 'ingredients'; var ri2 =
 
 if (mode === 'ingredients') {
 var ing2 = parseIngredientLine(line);
-if (ing2 && ing2.amount !== '1') ingLines.push(ing2);
+if (ing2) { ingLines.push(ing2); }
+else if (line.length < 50 && !/\d{2,}/.test(line)) { /* likely a sub-header, skip */ }
 else { mode = 'steps'; stepLines.push(line); }
 } else if (mode === 'steps') { stepLines.push(line); }
 else if (mode === 'notes') { noteLines.push(line); }
@@ -2593,27 +2726,46 @@ populateCategorySelects();
 toast('\u2705 ' + (en ? 'Category "' + (nameEn||nameHe) + '" added' : '\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4 "' + nameHe + '" \u05e0\u05d5\u05e1\u05e4\u05d4'));
 }
 
+function editCategoryFromScreen() {
+if (currentCategoryId) openEditCategoryModal(currentCategoryId);
+}
+
+function deleteCategoryFromScreen() {
+if (currentCategoryId) deleteCustomCategory(currentCategoryId);
+}
+
 function deleteCustomCategory(id) {
 var cat = null;
-for (var i = 0; i < state.customCategories.length; i++) { if (state.customCategories[i].id === id) { cat = state.customCategories[i]; break; } }
+var isCustom = false;
+for (var i = 0; i < state.customCategories.length; i++) { if (state.customCategories[i].id === id) { cat = state.customCategories[i]; isCustom = true; break; } }
+if (!cat) {
+for (var bi = 0; bi < CATEGORIES.length; bi++) { if (CATEGORIES[bi].id === id) { cat = CATEGORIES[bi]; break; } }
+}
 if (!cat) return;
 var count = 0;
 for (var j = 0; j < state.recipes.length; j++) { if (state.recipes[j].category === id) count++; }
-document.getElementById('delete-recipe-name').textContent = '\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4: "' + cat.he + '"' + (count > 0 ? ' (' + count + ' \u05de\u05ea\u05db\u05d5\u05e0\u05d9\u05dd)' : '');
+var catName = isEn() ? (cat.en || cat.he) : cat.he;
+document.getElementById('delete-recipe-name').textContent = (isEn() ? 'Category: "' : '\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4: "') + catName + '"' + (count > 0 ? ' (' + count + (isEn() ? ' recipes)' : ' \u05de\u05ea\u05db\u05d5\u05e0\u05d9\u05dd)') : '');
 var btn = document.querySelector('#delete-modal .btn-danger');
-btn.textContent = '\u05de\u05d7\u05e7 \u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4';
+btn.textContent = isEn() ? '\uD83D\uDDD1 Yes, Delete' : '\uD83D\uDDD1 \u05db\u05df, \u05de\u05d7\u05e7 \u05dc\u05e6\u05de\u05d9\u05ea\u05d5\u05ea';
 var catId = id;
+var catIsCustom = isCustom;
 btn.onclick = function(){
+if (catIsCustom) {
 var newCats = [];
 for (var i = 0; i < state.customCategories.length; i++) { if (state.customCategories[i].id !== catId) newCats.push(state.customCategories[i]); }
 state.customCategories = newCats;
+} else {
+state.hiddenCategories.push(catId);
+}
 saveState();
 closeModal('delete-modal');
-btn.textContent = '\uD83D\uDDD1 \u05db\u05df, \u05de\u05d7\u05e7 \u05dc\u05e6\u05de\u05d9\u05ea\u05d5\u05ea';
+btn.textContent = isEn() ? '\uD83D\uDDD1 Yes, Delete' : '\uD83D\uDDD1 \u05db\u05df, \u05de\u05d7\u05e7 \u05dc\u05e6\u05de\u05d9\u05ea\u05d5\u05ea';
 btn.onclick = deleteRecipe;
 buildCategoryGrid();
 populateCategorySelects();
-toast('\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4 "' + cat.he + '" \u05e0\u05de\u05d7\u05e7\u05d4');
+toast(isEn() ? 'Category deleted' : '\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4 "\u05e0\u05de\u05d7\u05e7\u05d4"');
+goTo('screen-home', false);
 };
 openModal('delete-modal');
 }
@@ -2795,6 +2947,13 @@ state.screenHistory = ['screen-lang'];
 }
 
 document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('click', function(e) {
+var ac = document.getElementById('search-autocomplete');
+var inp = document.getElementById('home-search');
+if (ac && inp && !inp.contains(e.target) && !ac.contains(e.target)) {
+ac.style.display = 'none';
+}
+});
 
 </script>
 </body>
